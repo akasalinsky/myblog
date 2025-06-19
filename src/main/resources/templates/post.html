@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${post.title + ' | Блог'}">Пост</title>
+    <meta charset="UTF-8"/>
+    <script>
+        function startEditComment(commentId) {
+            var span = document.getElementById("comment-" + commentId);
+            var textarea = document.getElementById("commentInput-" + commentId);
+            var editButton = document.getElementById("btnEdit-" + commentId);
+            var saveButton = document.getElementById("btnSave-" + commentId);
+
+            if (!span || !textarea || !editButton || !saveButton) return;
+
+            // Скрываем span, показываем textarea и кнопку сохранения
+            span.style.display = 'none';
+            textarea.style.display = 'block';
+
+            textarea.value = span.textContent;
+
+            editButton.style.display = 'none';
+            saveButton.style.display = 'inline-block';
+        }
+
+        function addCommentField() {
+            var form = document.getElementById("addCommentForm");
+
+            var textarea = document.createElement("textarea");
+            textarea.name = "text";
+            textarea.placeholder = "Ваш комментарий...";
+            textarea.style.width = "100%";
+            textarea.rows = 3;
+
+            var submitButton = document.createElement("button");
+            submitButton.type = "submit";
+            submitButton.innerHTML = "&#10003;";
+
+            var oldButton = document.getElementById("addCommentButton");
+            if (oldButton) {
+                oldButton.remove();
+            }
+
+            form.appendChild(textarea);
+            form.appendChild(submitButton);
+        }
+    </script>
+</head>
+<body>
+
+<!-- Навигация -->
+<div style="text-align:right; padding: 10px;">
+    <a th:href="@{/posts}" style="text-decoration:none;">
+        <b>НА ГЛАВНУЮ &cudarrr;</b>
+    </a>
+</div>
+
+<!-- Основная таблица -->
+<table style="width:60%; margin-left:auto; margin-right:auto; border-collapse: collapse;">
+
+    <!-- Заголовок поста -->
+    <tr>
+        <td colspan="2">
+            <h1 th:text="${post.title}">Заголовок</h1>
+        </td>
+    </tr>
+
+    <!-- Изображение -->
+    <tr>
+        <td colspan="2" style="text-align:center;">
+            <img th:src="@{'/images/' + ${post.id}}" alt="Изображение" width="400"/>
+        </td>
+    </tr>
+
+    <!-- Лайки -->
+    <tr>
+        <td colspan="2" style="text-align:center;">
+            <form th:action="@{/posts/{id}/like(id=${post.id})}" method="post">
+                <button name="like" value="true">&#x1F44D;</button>
+                <span th:text="${post.likesCount}">0</span>
+                <button name="like" value="false">&#128078;</button>
+                <span style="float:right;" th:text="${'Комментарии (' + #lists.size(post.comments) + ')'}"></span>
+            </form>
+        </td>
+    </tr>
+
+    <!-- Теги -->
+    <tr>
+        <td colspan="2" style="text-align:center;">
+            <p>
+                <span th:each="tag : ${post.tags}" th:text="'#' + ${tag}" style="margin:5px;"></span>
+            </p>
+        </td>
+    </tr>
+
+    <!-- Текст поста -->
+    <tr>
+        <td colspan="2" style="padding:20px;">
+            <p th:text="${post.text}">Текст поста</p>
+        </td>
+    </tr>
+
+    <!-- Кнопки Редактирования и Удаления -->
+    <tr>
+        <td colspan="2" style="text-align:right; padding:10px;">
+            <form th:action="@{/posts/{id}/edit(id=${post.id})}" method="get">
+                <button type="submit">РЕДАКТИРОВАТЬ ПОСТ</button>
+            </form>
+            <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post">
+                <button type="submit">УДАЛИТЬ ПОСТ</button>
+            </form>
+        </td>
+    </tr>
+
+    <!-- Комментарии -->
+    <tr>
+        <td colspan="2">
+            <hr/>
+            <h2 style="text-align:center;">Комментарии</h2>
+        </td>
+    </tr>
+
+    <div th:if="${not #lists.isEmpty(post.comments)}">
+        <tr th:each="comment : ${post.comments}">
+            <td style="border-left: thin solid grey; padding:10px;">
+                <span th:id="'comment-' + ${comment.id}" th:text="${comment.text}">Комментарий</span>
+            </td>
+        </tr>
+    </div>
+
+    <!-- Цикл по комментариям -->
+    <div th:if="${not #lists.isEmpty(post.comments)}">
+        <tr th:each="comment : ${post.comments}">
+            <td style="border-left: thin solid grey; padding:10px;">
+                <form
+                        method="POST"
+                        th:action="@{/posts/{postId}/comments/{commentId}(postId=${post.id}, commentId=${comment.id})"
+                        onsubmit="return confirm('Вы действительно хотите обновить комментарий?');">
+
+                    <!-- Отображение текущего комментария -->
+                    <span th:id="'comment-' + ${comment.id}" th:text="${comment.text}">Комментарий</span>
+
+                    <!-- Поле редактирования -->
+                    <textarea
+                            th:id="'commentInput-' + ${comment.id}"
+                            th:name="'text'"
+                            style="width:100%; display:none;"
+                            rows="3"
+                            th:text="${comment.text}"></textarea>
+
+                    <!-- Кнопка редактирования -->
+                    <button
+                            th:id="'btnEdit-' + ${comment.id}"
+                            onclick="startEditComment([[${comment.id}])"
+                            type="button"
+                            style="float:right; background: none; border: none; font-size: 18px;">
+                        &#9998;
+                    </button>
+
+                    <!-- Кнопка сохранения -->
+                    <button
+                            th:id="'btnSave-' + ${comment.id}"
+                            type="submit"
+                            style="float:right; display:none; font-size: 18px;">
+                        &#10003;
+                    </button>
+                </form>
+            </td>
+            <td style="width:100px; text-align:right; padding:10px;">
+                <form method="POST" th:action="@{/posts/{postId}/comments/{commentId}/delete(postId=${post.id}, commentId=${comment.id})}">
+                    <button type="submit" style="background: none; border: none; font-size: 18px;">&#10007;</button>
+                </form>
+            </td>
+        </tr>
+    </div>
+
+    <!-- Сообщение, если комментариев нет -->
+    <tr th:if="${#lists.isEmpty(post.comments)}">
+        <td colspan="2" style="text-align:center; color:gray;">
+            Нет комментариев
+        </td>
+    </tr>
+
+    <!-- Форма добавления нового комментария -->
+    <tr>
+        <td colspan="2" style="padding:20px;">
+            <form id="addCommentForm" method="POST" th:action="@{/posts/{id}/comments(id=${post.id})}">
+                <textarea name="text" placeholder="Оставить комментарий..." style="width:100%; height:60px;"></textarea>
+                <button id="addCommentButton" type="button" onclick="addCommentField()">Добавить комментарий</button>
+                <button type="submit" style="display:none;">Сохранить</button>
+            </form>
+        </td>
+    </tr>
+
+</table>
+
+</body>
+</html>
